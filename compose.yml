@@ -1,0 +1,6 @@
+services:
+  server:
+    build: ./game_ms
+    container_name: server
+    ports:
+      - "8080:8080"

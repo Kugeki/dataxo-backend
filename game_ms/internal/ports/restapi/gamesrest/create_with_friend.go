@@ -13,10 +13,11 @@ type ModeParams struct {
 
 type CreateWithFriendReq struct {
 	ModeParams ModeParams `json:"mode_params"`
+	ClientID   string     `json:"client_id"`
 }
 
 func (r *CreateWithFriendReq) ToDomain() domain.ModeParams {
-	return domain.ModeParams{MySide: r.ModeParams.MySide}
+	return domain.ModeParams{MySide: domain.SideRequest(r.ModeParams.MySide)}
 }
 
 type CreateWithFriendResp struct {
@@ -36,8 +37,9 @@ func (h *Handler) CreateWithFriend() http.HandlerFunc {
 			return
 		}
 
-		player := domain.Player{RemoteAddr: r.RemoteAddr}
+		player := domain.PlayerID{RemoteAddr: h.GetRemoteAddr(r), ClientID: req.ClientID}
 		modeParams := req.ToDomain()
+		h.log.Debug("create game", slog.Any("playerID", player))
 
 		g, err := h.gameUC.CreateGame(r.Context(), player, domain.ModeWithFriend, modeParams)
 		if err != nil {

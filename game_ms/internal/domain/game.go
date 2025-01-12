@@ -8,13 +8,13 @@ import (
 type Game struct {
 	ID          uuid.UUID
 	Mode        string
+	Config      DisappearingModeConfig
 	State       State
 	Moves       []Move
-	Board       [][]Side
-	XPlayer     Player
-	OPlayer     Player
+	XPlayer     *Player
+	OPlayer     *Player
 	WinSequence []Move
-	Winner      Side
+	Winner      WinSide
 }
 
 type GameErrorWithID struct {
@@ -86,7 +86,7 @@ type MoveErrorWithInGameID struct {
 }
 
 func (e *MoveErrorWithInGameID) Error() string {
-	return fmt.Sprintf("move id(%v) ingame_id(%v) max_ingame_id(%v): %v",
+	return fmt.Sprintf("move_id(%v) ingame_id(%v) max_ingame_id(%v): %v",
 		e.Move.ID, e.Move.InGameID, e.MaxInGameID, e.Err)
 }
 
@@ -94,31 +94,111 @@ func (e *MoveErrorWithInGameID) Unwrap() error {
 	return e.Err
 }
 
-type Player struct {
+type PlayerID struct {
 	RemoteAddr string
+	ClientID   string
+}
+
+type Player struct {
+	ID    PlayerID
+	Ready bool
+}
+
+type PlayerError struct {
+	Err      error
+	PlayerID PlayerID
+}
+
+func (e *PlayerError) Error() string {
+	return fmt.Sprintf("player_id(%v): %v",
+		e.PlayerID, e.Err)
+}
+
+func (e *PlayerError) Unwrap() error {
+	return e.Err
+}
+
+type AddGamePlayerError struct {
+	Err      error
+	PlayerID PlayerID
+	Side     Side
+	GameID   uuid.UUID
+}
+
+func (e *AddGamePlayerError) Error() string {
+	return fmt.Sprintf("player_id(%v) side(%v) game_id(%v): %v",
+		e.PlayerID, e.Side, e.GameID, e.Err)
+}
+
+func (e *AddGamePlayerError) Unwrap() error {
+	return e.Err
 }
 
 type ModeParams struct {
-	MySide Side
+	MySide SideRequest
 }
+
+type SideRequest int
+
+const (
+	RandomSideRequest SideRequest = iota
+	XSideRequest
+	OSideRequest
+)
 
 type Side int
 
 const (
-	NoneSide Side = iota - 1
+	NoneSide Side = iota
 	XSide
 	OSide
 )
 
+func (s Side) ToWinSide() WinSide {
+	switch s {
+	case NoneSide:
+		return NoneWin
+	case XSide:
+		return XWin
+	case OSide:
+		return OWin
+	default:
+		// todo: process
+		return NoneWin
+	}
+}
+
+func NoneSideMove() Move {
+	return Move{Side: NoneSide}
+}
+
 type WinResult struct {
-	Side     Side
+	Side     WinSide
 	Sequence []Move
 }
 
+type WinSide int
+
+const (
+	NoneWin WinSide = iota
+	XWin
+	OWin
+	Draw
+)
+
 func (r WinResult) IsNoWinner() bool {
-	return r.Side == NoneSide
+	return r.Side == NoneWin
 }
 
 func NoWinner() WinResult {
-	return WinResult{Side: NoneSide}
+	return WinResult{Side: NoneWin}
+}
+
+type JoinGameResult struct {
+	Side         Side
+	ReadyToStart bool
+}
+
+type MakeMoveResult struct {
+	GameFinished bool
 }
