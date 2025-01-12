@@ -30,6 +30,14 @@ func NewHandler() slog.Handler {
 	return &DiscardHandler{}
 }
 
+func LoggerIfNil(log *slog.Logger) *slog.Logger {
+	if log == nil {
+		return Logger()
+	}
+
+	return log
+}
+
 type DiscardHandler struct{}
 
 func (h DiscardHandler) Enabled(context.Context, slog.Level) bool {

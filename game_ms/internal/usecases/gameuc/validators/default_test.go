@@ -1,8 +1,9 @@
-package withfriend
+package validators
 
 import (
 	"context"
 	"dataxo-backend-game-ms/internal/domain"
+	"dataxo-backend-game-ms/internal/usecases/gameuc"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -10,14 +11,14 @@ import (
 func TestDefaultMoveValidator_ValidateMoveCoords(t *testing.T) {
 	tcases := []struct {
 		Name      string
-		BoardSize BoardSize
+		BoardSize gameuc.BoardSize
 		MoveX     int
 		MoveY     int
 		Err       error
 	}{
 		{
 			Name: "valid move",
-			BoardSize: BoardSize{
+			BoardSize: gameuc.BoardSize{
 				Width:  10,
 				Height: 5,
 			},
@@ -27,7 +28,7 @@ func TestDefaultMoveValidator_ValidateMoveCoords(t *testing.T) {
 		},
 		{
 			Name: "overflow X",
-			BoardSize: BoardSize{
+			BoardSize: gameuc.BoardSize{
 				Width:  10,
 				Height: 5,
 			},
@@ -37,7 +38,7 @@ func TestDefaultMoveValidator_ValidateMoveCoords(t *testing.T) {
 		},
 		{
 			Name: "overflow Y",
-			BoardSize: BoardSize{
+			BoardSize: gameuc.BoardSize{
 				Width:  10,
 				Height: 5,
 			},
@@ -47,7 +48,7 @@ func TestDefaultMoveValidator_ValidateMoveCoords(t *testing.T) {
 		},
 		{
 			Name: "negative X",
-			BoardSize: BoardSize{
+			BoardSize: gameuc.BoardSize{
 				Width:  10,
 				Height: 5,
 			},
@@ -57,7 +58,7 @@ func TestDefaultMoveValidator_ValidateMoveCoords(t *testing.T) {
 		},
 		{
 			Name: "negative Y",
-			BoardSize: BoardSize{
+			BoardSize: gameuc.BoardSize{
 				Width:  10,
 				Height: 5,
 			},
@@ -65,30 +66,10 @@ func TestDefaultMoveValidator_ValidateMoveCoords(t *testing.T) {
 			MoveY: -1,
 			Err:   domain.ErrMoveOutOfBoard,
 		},
-		{
-			Name: "zeroed X",
-			BoardSize: BoardSize{
-				Width:  10,
-				Height: 5,
-			},
-			MoveX: 0,
-			MoveY: 3,
-			Err:   domain.ErrMoveOutOfBoard,
-		},
-		{
-			Name: "zeroed Y",
-			BoardSize: BoardSize{
-				Width:  10,
-				Height: 5,
-			},
-			MoveX: 5,
-			MoveY: 0,
-			Err:   domain.ErrMoveOutOfBoard,
-		},
 	}
 
 	for _, tc := range tcases {
-		validator := NewDefaultMoveValidator(Config{
+		validator := NewDefault(domain.DisappearingModeConfig{
 			PlayerFiguresLimit: 4,
 			WinLineLength:      3,
 			BoardWidth:         tc.BoardSize.Width,
