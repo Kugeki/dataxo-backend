@@ -8,6 +8,7 @@ import (
 	"dataxo-backend-game-ms/internal/ports/restapi/gamesrest"
 	"dataxo-backend-game-ms/internal/usecases/gameuc"
 	"dataxo-backend-game-ms/internal/usecases/gameuc/modes"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/lmittmann/tint"
@@ -81,12 +82,9 @@ func main() {
 
 	go func() {
 		err := restAPI.Run()
-		if err != nil {
-			if err != nil && err != http.ErrServerClosed {
-				log.Error("rest api run error", slog.Any("error", err))
-				cancel()
-			}
-			return
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("rest api run error", slog.Any("error", err))
+			cancel()
 		}
 	}()
 

@@ -30,9 +30,7 @@ type GameUC struct {
 }
 
 func New(gameRepo GameRepository, gameMode GameMode, log *slog.Logger) *GameUC {
-	log = slogdiscard.LoggerIfNil(log)
-
-	return &GameUC{gameRepo: gameRepo, gameMode: gameMode, log: log}
+	return &GameUC{gameRepo: gameRepo, gameMode: gameMode, log: slogdiscard.LoggerIfNil(log)}
 }
 
 func (uc *GameUC) CreateGame(ctx context.Context, plID domain.PlayerID, mode string, params domain.ModeParams) (*domain.Game, error) {

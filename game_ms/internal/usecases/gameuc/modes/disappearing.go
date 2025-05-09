@@ -39,10 +39,6 @@ func NewDisappearingMode(cfg domain.DisappearingModeConfig, log *slog.Logger) (*
 		return nil, err
 	}
 
-	if log == nil {
-		log = slogdiscard.Logger()
-	}
-
 	validator := validators.NewDefault(cfg, log)
 	winChecker := wincheckers.NewDefault(cfg.WinLineLength)
 	moveMaker := movemakers.NewDefault(cfg, log)
@@ -50,7 +46,8 @@ func NewDisappearingMode(cfg domain.DisappearingModeConfig, log *slog.Logger) (*
 		return nil, err
 	}
 
-	return &DisappearingMode{Cfg: cfg, validator: validator, checker: winChecker, moveMaker: moveMaker, log: log}, nil
+	return &DisappearingMode{Cfg: cfg, validator: validator, checker: winChecker,
+		moveMaker: moveMaker, log: slogdiscard.LoggerIfNil(log)}, nil
 }
 
 func (m *DisappearingMode) IterateGame(ctx context.Context, g *domain.Game, move domain.Move) error {
