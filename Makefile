@@ -8,3 +8,6 @@ run-and-attach:
 
 stop:
 	docker compose down
+
+remove-dangling:
+	docker rmi $(docker images --filter "dangling=true" -q --no-trunc)

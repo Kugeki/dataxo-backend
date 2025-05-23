@@ -54,11 +54,12 @@ func (s State) String() string {
 }
 
 type Move struct {
-	ID       int
-	InGameID int
-	X        int
-	Y        int
-	Side     Side
+	ID        int  `json:"id"`
+	InGameID  int  `json:"in_game_id"`
+	X         int  `json:"x"`
+	Y         int  `json:"y"`
+	TimesUsed int  `json:"times_used"`
+	Side      Side `json:"side"`
 }
 
 func (m Move) XY() (int, int) {
@@ -199,6 +200,21 @@ type JoinGameResult struct {
 	ReadyToStart bool
 }
 
+type MoveEventType int
+
+const (
+	PlaceMove MoveEventType = iota
+	RemoveMove
+	HeatMove
+	BlockMove
+)
+
+type MoveEvent struct {
+	Type MoveEventType
+	Move Move
+}
+
 type MakeMoveResult struct {
 	GameFinished bool
+	Events       []MoveEvent
 }

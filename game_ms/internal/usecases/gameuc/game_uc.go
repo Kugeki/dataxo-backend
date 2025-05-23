@@ -19,7 +19,7 @@ type GameRepository interface {
 }
 
 type GameMode interface {
-	IterateGame(ctx context.Context, g *domain.Game, move domain.Move) error
+	IterateGame(ctx context.Context, g *domain.Game, move domain.Move) (domain.MakeMoveResult, error)
 	GetConfig() domain.DisappearingModeConfig
 }
 
@@ -176,19 +176,15 @@ func (uc *GameUC) MakeMove(ctx context.Context, gameID uuid.UUID, move domain.Mo
 		return domain.MakeMoveResult{}, &domain.GameErrorWithID{Err: domain.ErrGameFinished, ID: g.ID}
 	}
 
-	err = uc.gameMode.IterateGame(ctx, g, move)
+	res, err := uc.gameMode.IterateGame(ctx, g, move)
 	if err != nil {
-		return domain.MakeMoveResult{}, err
+		return res, err
 	}
 
 	err = uc.gameRepo.UpdateGame(ctx, g)
 	if err != nil {
-		return domain.MakeMoveResult{}, err
+		return res, err
 	}
 
-	if g.State == domain.Finished {
-		return domain.MakeMoveResult{GameFinished: true}, nil
-	}
-
-	return domain.MakeMoveResult{}, nil
+	return res, nil
 }

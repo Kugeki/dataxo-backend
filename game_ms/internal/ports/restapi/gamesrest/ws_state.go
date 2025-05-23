@@ -22,7 +22,7 @@ type WsGameStateResp struct {
 	GameID      uuid.UUID      `json:"game_id"`
 	Mode        string         `json:"mode"`
 	Config      WsGameConfig   `json:"config"`
-	State       domain.State   `json:"state"`
+	State       string         `json:"state"`
 	Moves       []domain.Move  `json:"moves"`
 	WinSequence []domain.Move  `json:"win_sequence"`
 	Winner      domain.WinSide `json:"winner"`
@@ -53,7 +53,7 @@ func (h *Handler) WsState(session *melody.Session, requestID string, gameID uuid
 			BoardWidth:         cfg.BoardWidth,
 			BoardHeight:        cfg.BoardHeight,
 		},
-		State:       g.State,
+		State:       g.State.String(),
 		Moves:       g.Moves,
 		WinSequence: g.WinSequence,
 		Winner:      g.Winner,
