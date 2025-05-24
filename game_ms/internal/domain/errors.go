@@ -28,3 +28,13 @@ var (
 	ErrNegativeOrZeroedBoardWidth    = errors.New("board width is negative or equals to zero")
 	ErrNegativeOrZeroedBoardHeight   = errors.New("board height is negative or equals to zero")
 )
+
+func IsNeedReSync(err error) bool {
+	errs := []error{ErrMoveOutOfBoard, ErrInvalidMoveInGameID, ErrInvalidSide}
+	for i := range errs {
+		if errors.Is(err, errs[i]) {
+			return true
+		}
+	}
+	return false
+}

@@ -227,8 +227,13 @@ func (h *Handler) WsGetPlayerID(session *melody.Session) domain.PlayerID {
 type WsError struct {
 	Error         string `json:"error"`
 	ResponseForID string `json:"response_for_id,omitempty"`
+	NeedReSync    bool   `json:"need_re_sync"`
 }
 
 func (h *Handler) WsRespondErrorWithID(session *melody.Session, err error, requestID string) {
-	h.wsResponder.RespondWs(session, &WsError{Error: err.Error(), ResponseForID: requestID})
+	h.wsResponder.RespondWs(session, &WsError{
+		Error:         err.Error(),
+		ResponseForID: requestID,
+		NeedReSync:    domain.IsNeedReSync(err),
+	})
 }
