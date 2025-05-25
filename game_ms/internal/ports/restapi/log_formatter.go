@@ -34,11 +34,14 @@ type LogEntry struct {
 }
 
 func NewLogEntry(log *slog.Logger, reqLog *httplog.RequestLogger, r *http.Request) *LogEntry {
+	ctx := r.Context()
+	reqLog.LogBegin(ctx, r, middleware.GetReqID(ctx))
 	return &LogEntry{log: log, reqLog: reqLog, r: r}
 }
 
 func (e *LogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, extra interface{}) {
 	ctx := e.r.Context()
+
 	e.reqLog.LogEnd(ctx, middleware.GetReqID(ctx), status, elapsed)
 }
 

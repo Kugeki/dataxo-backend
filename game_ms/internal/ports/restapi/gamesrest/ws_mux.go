@@ -54,11 +54,14 @@ func (h *Handler) WsMux() http.HandlerFunc {
 			return
 		}
 
+		clientID := chi.URLParam(session.Request, "client_id")
+		session.Set("client_id", clientID)
+
 		// TODO: redo this, it's just workaround
 		if gameIDParam == "create" {
 			player := domain.PlayerID{
 				RemoteAddr: h.GetRemoteAddr(session.Request),
-				ClientID:   session.Request.Header.Get("Client-Id"),
+				ClientID:   clientID,
 			}
 			h.log.Debug("create game", slog.Any("playerID", player))
 
