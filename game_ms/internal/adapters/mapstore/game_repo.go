@@ -27,11 +27,12 @@ func (r *GameRepoMap) CreateGame(ctx context.Context, plID domain.PlayerID, side
 	}
 
 	g := &domain.Game{
-		ID:     id,
-		Mode:   mode,
-		Config: cfg,
-		State:  domain.Created,
-		Moves:  make([]domain.Move, 0),
+		ID:          id,
+		Mode:        mode,
+		Config:      cfg,
+		State:       domain.Created,
+		Moves:       make([]domain.Move, 0),
+		WinSequence: make([]domain.Move, 0),
 	}
 
 	player := domain.Player{ID: plID, Ready: false}
