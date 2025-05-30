@@ -60,8 +60,7 @@ func (h *Handler) WsMux() http.HandlerFunc {
 		// TODO: redo this, it's just workaround
 		if gameIDParam == "create" {
 			player := domain.PlayerID{
-				RemoteAddr: h.GetRemoteAddr(session.Request),
-				ClientID:   clientID,
+				ClientID: clientID,
 			}
 			h.log.Debug("create game", slog.Any("playerID", player))
 
@@ -213,8 +212,6 @@ func (h *Handler) WsSendSide(ctx context.Context, session *melody.Session, reque
 }
 
 func (h *Handler) WsGetPlayerID(session *melody.Session) domain.PlayerID {
-	remoteAddr := h.GetRemoteAddr(session.Request) // todo: session.RemoteAddr().String()?
-
 	clientIDValue, ok := session.Get("client_id")
 	if !ok {
 		clientIDValue = session.Request.Header.Get("Client-Id")
@@ -222,8 +219,7 @@ func (h *Handler) WsGetPlayerID(session *melody.Session) domain.PlayerID {
 	clientID, _ := clientIDValue.(string)
 
 	return domain.PlayerID{
-		RemoteAddr: remoteAddr,
-		ClientID:   clientID,
+		ClientID: clientID,
 	}
 }
 

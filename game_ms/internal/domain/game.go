@@ -96,8 +96,7 @@ func (e *MoveErrorWithInGameID) Unwrap() error {
 }
 
 type PlayerID struct {
-	RemoteAddr string
-	ClientID   string
+	ClientID string
 }
 
 type Player struct {
