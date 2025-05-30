@@ -23,13 +23,6 @@ func NewDefault(cfg domain.DisappearingModeConfig, log *slog.Logger) *Default {
 }
 
 func (v *Default) ValidateMove(ctx context.Context, game *domain.Game, board gameuc.Board, move domain.Move) error {
-	if board.GetMove(move.XY()).Side != domain.NoneSide {
-		return &domain.MoveError{
-			Err:  domain.ErrPlaceAlreadyTaken,
-			Move: move,
-		}
-	}
-
 	maxInGameID := v.GetMaxMoveInGameID(ctx, game.Moves)
 
 	err := v.ValidateMoveInGameID(ctx, move.InGameID, maxInGameID, game.Moves)
@@ -55,6 +48,13 @@ func (v *Default) ValidateMove(ctx context.Context, game *domain.Game, board gam
 	err = v.ValidateSide(ctx, move.Side)
 	if err != nil {
 		return &domain.MoveError{Err: err, Move: move}
+	}
+
+	if board.GetMove(move.XY()).Side != domain.NoneSide {
+		return &domain.MoveError{
+			Err:  domain.ErrPlaceAlreadyTaken,
+			Move: move,
+		}
 	}
 
 	return nil

@@ -25,6 +25,13 @@ type WsSideResponse struct {
 	Side domain.Side `json:"side"`
 }
 
+type WsCreateResponse struct {
+	Type   string `json:"type"`
+	GameID string `json:"game_id"`
+	Side   int    `json:"side"`
+}
+
+var CreateMessageType = "create_message"
 var SideMessageType = "side_message"
 
 func (h *Handler) WsMux() http.HandlerFunc {
@@ -37,7 +44,7 @@ func (h *Handler) WsMux() http.HandlerFunc {
 		gameIDParam := chi.URLParam(session.Request, "game_id")
 
 		gameID, err := uuid.Parse(gameIDParam)
-		if err != nil {
+		if err != nil && gameIDParam != "create" {
 			h.log.Warn("can't parse game id param to uuid",
 				slog.String("handler", "WsMux"),
 				slog.String("param", gameIDParam),
@@ -45,6 +52,41 @@ func (h *Handler) WsMux() http.HandlerFunc {
 			)
 			h.RespondErrorWsAndClose(session, "", err, h.log)
 			return
+		}
+
+		clientID := chi.URLParam(session.Request, "client_id")
+		session.Set("client_id", clientID)
+
+		// TODO: redo this, it's just workaround
+		if gameIDParam == "create" {
+			player := domain.PlayerID{
+				ClientID: clientID,
+			}
+			h.log.Debug("create game", slog.Any("playerID", player))
+
+			g, err := h.gameUC.CreateGame(ctx, player, domain.ModeWithFriend,
+				domain.ModeParams{MySide: domain.RandomSideRequest})
+			if err != nil {
+				h.log.Error("uc create game", slog.Any("error", err))
+				h.RespondErrorWsAndClose(session, "", err, h.log)
+				return
+			}
+
+			side, err := h.WsGetSide(ctx, session, g.ID)
+			if err != nil {
+				h.log.Error("uc create game get side", slog.Any("error", err))
+				h.RespondErrorWsAndClose(session, "", err, h.log)
+				return
+			}
+
+			resp := WsCreateResponse{
+				Type:   CreateMessageType,
+				GameID: g.ID.String(),
+				Side:   int(side),
+			}
+			h.wsResponder.RespondWs(session, resp)
+
+			gameID = g.ID
 		}
 
 		_, err = h.gameUC.GetGame(ctx, gameID)
@@ -170,22 +212,27 @@ func (h *Handler) WsSendSide(ctx context.Context, session *melody.Session, reque
 }
 
 func (h *Handler) WsGetPlayerID(session *melody.Session) domain.PlayerID {
-	remoteAddr := h.GetRemoteAddr(session.Request) // todo: session.RemoteAddr().String()?
-
-	clientIDValue, _ := session.Get("client_id")
+	clientIDValue, ok := session.Get("client_id")
+	if !ok {
+		clientIDValue = session.Request.Header.Get("Client-Id")
+	}
 	clientID, _ := clientIDValue.(string)
 
 	return domain.PlayerID{
-		RemoteAddr: remoteAddr,
-		ClientID:   clientID,
+		ClientID: clientID,
 	}
 }
 
 type WsError struct {
 	Error         string `json:"error"`
 	ResponseForID string `json:"response_for_id,omitempty"`
+	NeedReSync    bool   `json:"need_re_sync"`
 }
 
 func (h *Handler) WsRespondErrorWithID(session *melody.Session, err error, requestID string) {
-	h.wsResponder.RespondWs(session, &WsError{Error: err.Error(), ResponseForID: requestID})
+	h.wsResponder.RespondWs(session, &WsError{
+		Error:         err.Error(),
+		ResponseForID: requestID,
+		NeedReSync:    domain.IsNeedReSync(err),
+	})
 }

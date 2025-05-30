@@ -19,12 +19,51 @@ type WsGameResp struct {
 	ResponseForID string `json:"response_for_id"`
 }
 
+type MoveEvent struct {
+	Type      string      `json:"type"`
+	MoveID    int         `json:"move_id"`
+	X         int         `json:"x"`
+	Y         int         `json:"y"`
+	Side      domain.Side `json:"side"`
+	TimesUsed int         `json:"times_used"`
+}
+
+func (e *MoveEvent) FromDomain(event domain.MoveEvent) {
+	t := ""
+	switch event.Type {
+	case domain.PlaceMove:
+		t = "place_move"
+	case domain.RemoveMove:
+		t = "remove_move"
+	case domain.HeatMove:
+		t = "heat_move"
+	case domain.BlockMove:
+		t = "block_move"
+	}
+
+	move := event.Move
+
+	e.Type = t
+	e.MoveID = move.InGameID
+	e.X = move.X
+	e.Y = move.Y
+	e.Side = move.Side
+	e.TimesUsed = move.TimesUsed
+}
+
+func MoveEventsFromDomain(events []domain.MoveEvent) []MoveEvent {
+	converted := make([]MoveEvent, len(events))
+
+	for i := range events {
+		converted[i].FromDomain(events[i])
+	}
+
+	return converted
+}
+
 type WsMoveBroadcast struct {
-	Type   string      `json:"type"`
-	MoveID int         `json:"move_id"`
-	X      int         `json:"x"`
-	Y      int         `json:"y"`
-	Side   domain.Side `json:"side"`
+	Type       string      `json:"type"`
+	MoveEvents []MoveEvent `json:"move_events"`
 }
 
 type WsGameFinishBroadcast struct {
@@ -69,17 +108,16 @@ func (h *Handler) WsGame(session *melody.Session, requestID string, gameID uuid.
 		return
 	}
 
-	h.wsResponder.RespondWs(session, WsGameResp{
-		Type:          SuccessMoveResponseType,
-		ResponseForID: requestID,
-	})
+	/*
+		h.wsResponder.RespondWs(session, WsGameResp{
+			Type:          SuccessMoveResponseType,
+			ResponseForID: requestID,
+		})
+	*/
 
 	data, _ := h.wsResponder.Marshal(WsMoveBroadcast{
-		Type:   MoveBroadcastType,
-		MoveID: req.MoveID,
-		X:      req.X,
-		Y:      req.Y,
-		Side:   side,
+		Type:       MoveBroadcastType,
+		MoveEvents: MoveEventsFromDomain(res.Events),
 	})
 
 	err = h.wsHandler.BroadcastFilter(data, func(other *melody.Session) bool {
@@ -88,7 +126,7 @@ func (h *Handler) WsGame(session *melody.Session, requestID string, gameID uuid.
 			h.log.Error("game move broadcast", slog.Any("error", err))
 		}
 
-		if gameID == otherGameID && session != other {
+		if gameID == otherGameID {
 			return true
 		}
 		return false

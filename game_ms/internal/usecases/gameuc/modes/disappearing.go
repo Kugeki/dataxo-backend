@@ -20,7 +20,7 @@ type WinChecker interface {
 }
 
 type MoveMaker interface {
-	MakeMoveOnBoard(ctx context.Context, g *domain.Game, board gameuc.Board, move domain.Move)
+	MakeMoveOnBoard(ctx context.Context, g *domain.Game, board gameuc.Board, move domain.Move) []domain.MoveEvent
 }
 
 type DisappearingMode struct {
@@ -39,10 +39,6 @@ func NewDisappearingMode(cfg domain.DisappearingModeConfig, log *slog.Logger) (*
 		return nil, err
 	}
 
-	if log == nil {
-		log = slogdiscard.Logger()
-	}
-
 	validator := validators.NewDefault(cfg, log)
 	winChecker := wincheckers.NewDefault(cfg.WinLineLength)
 	moveMaker := movemakers.NewDefault(cfg, log)
@@ -50,29 +46,30 @@ func NewDisappearingMode(cfg domain.DisappearingModeConfig, log *slog.Logger) (*
 		return nil, err
 	}
 
-	return &DisappearingMode{Cfg: cfg, validator: validator, checker: winChecker, moveMaker: moveMaker, log: log}, nil
+	return &DisappearingMode{Cfg: cfg, validator: validator, checker: winChecker,
+		moveMaker: moveMaker, log: slogdiscard.LoggerIfNil(log)}, nil
 }
 
-func (m *DisappearingMode) IterateGame(ctx context.Context, g *domain.Game, move domain.Move) error {
+func (m *DisappearingMode) IterateGame(ctx context.Context, g *domain.Game, move domain.Move) (domain.MakeMoveResult, error) {
 	if g == nil {
-		return domain.ErrGameIsNil
+		return domain.MakeMoveResult{}, domain.ErrGameIsNil
 	}
 
 	if g.State == domain.Created {
-		return &domain.GameErrorWithID{Err: domain.ErrGameNotStarted, ID: g.ID}
+		return domain.MakeMoveResult{}, &domain.GameErrorWithID{Err: domain.ErrGameNotStarted, ID: g.ID}
 	}
 	if g.State == domain.Finished {
-		return &domain.GameErrorWithID{Err: domain.ErrGameFinished, ID: g.ID}
+		return domain.MakeMoveResult{}, &domain.GameErrorWithID{Err: domain.ErrGameFinished, ID: g.ID}
 	}
 
 	board := gameuc.NewBoard(g.Moves, m.Cfg.PlayerFiguresLimit)
 
 	err := m.validator.ValidateMove(ctx, g, board, move)
 	if err != nil {
-		return &domain.GameErrorWithID{Err: err, ID: g.ID}
+		return domain.MakeMoveResult{}, &domain.GameErrorWithID{Err: err, ID: g.ID}
 	}
 
-	m.moveMaker.MakeMoveOnBoard(ctx, g, board, move)
+	moveEvents := m.moveMaker.MakeMoveOnBoard(ctx, g, board, move)
 
 	boardSize := gameuc.BoardSize{
 		Width:  m.Cfg.BoardWidth,
@@ -82,20 +79,26 @@ func (m *DisappearingMode) IterateGame(ctx context.Context, g *domain.Game, move
 	// todo: add win sequence
 	winResult, err := m.checker.CheckWin(ctx, g, board, boardSize, move)
 	if err != nil {
-		return &domain.GameErrorWithID{Err: err, ID: g.ID}
+		return domain.MakeMoveResult{}, &domain.GameErrorWithID{Err: err, ID: g.ID}
 	}
 
 	switch winResult.Side {
 	case domain.NoneWin:
-		return nil
+		return domain.MakeMoveResult{
+			GameFinished: false,
+			Events:       moveEvents,
+		}, nil
 	case domain.XWin, domain.OWin, domain.Draw:
 		g.Winner = winResult.Side
 		g.State = domain.Finished
 		g.WinSequence = winResult.Sequence
-		return nil
+		return domain.MakeMoveResult{
+			GameFinished: true,
+			Events:       moveEvents,
+		}, nil
 	default:
 		err = &domain.MoveError{Err: domain.ErrInvalidWinSide, Move: move}
-		return &domain.GameErrorWithID{Err: err, ID: g.ID}
+		return domain.MakeMoveResult{}, &domain.GameErrorWithID{Err: err, ID: g.ID}
 	}
 }
 
