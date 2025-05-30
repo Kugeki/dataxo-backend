@@ -37,7 +37,7 @@ func (h *Handler) CreateWithFriend() http.HandlerFunc {
 			return
 		}
 
-		player := domain.PlayerID{RemoteAddr: h.GetRemoteAddr(r), ClientID: req.ClientID}
+		player := domain.PlayerID{ClientID: req.ClientID}
 		modeParams := req.ToDomain()
 		h.log.Debug("create game", slog.Any("playerID", player))
 
